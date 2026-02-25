@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Urban Viper — Immersive Snake</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: rgba(15, 23, 42, 0.82);
+      --panel-border: rgba(148, 163, 184, 0.28);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #22d3ee;
+      --danger: #fb7185;
+      --success: #4ade80;
+      --warning: #facc15;
+      --shadow: 0 24px 45px rgba(0, 0, 0, 0.42);
+      --radius: 16px;
+      --gap: 12px;
+      --panel-blur: blur(10px);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.18), transparent 30%),
+        radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.18), transparent 35%),
+        linear-gradient(150deg, #020617 0%, #0f172a 50%, #0b1120 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      overflow-x: hidden;
+    }
+
+    .app {
+      width: min(1250px, 100%);
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: var(--panel-blur);
+    }
+
+    .arena-wrap {
+      position: relative;
+      display: grid;
+      padding: 14px;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .title {
+      font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      color: var(--muted);
+      background: rgba(15, 23, 42, 0.35);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(70px, 1fr));
+      gap: 8px;
+    }
+
+    .stat {
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      padding: 8px;
+      background: rgba(15, 23, 42, 0.45);
+      min-height: 64px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .label { font-size: 0.72rem; color: var(--muted); }
+    .value { font-size: 1rem; font-weight: 700; }
+
+    .game-zone {
+      position: relative;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      overflow: hidden;
+      min-height: 380px;
+      background: linear-gradient(180deg, #071120, #091225);
+    }
+
+    canvas {
+      width: 100%;
+      height: min(72vh, 720px);
+      display: block;
+      touch-action: none;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(16, 185, 129, 0.24), rgba(2, 6, 23, 0.9) 52%),
+        linear-gradient(180deg, rgba(30, 41, 59, 0.88), rgba(2, 6, 23, 0.95));
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      background: rgba(2, 6, 23, 0.52);
+      padding: 16px;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+
+    .overlay.hidden { opacity: 0; }
+
+    .overlay h2 { margin: 0 0 8px; font-size: clamp(1.2rem, 3vw, 1.9rem); }
+    .overlay p { margin: 0; color: #cbd5e1; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: #e2e8f0;
+      background: linear-gradient(180deg, rgba(51, 65, 85, 0.7), rgba(15, 23, 42, 0.8));
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s ease, border-color 0.15s;
+    }
+
+    button:hover { border-color: var(--accent); }
+    button:active { transform: translateY(1px); }
+
+    .side {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      max-height: calc(100vh - 28px);
+      overflow: auto;
+    }
+
+    .group {
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(15, 23, 42, 0.32);
+      display: grid;
+      gap: 9px;
+    }
+
+    .group h3 { margin: 0; font-size: 0.94rem; }
+
+    .field {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 7px;
+      align-items: center;
+      font-size: 0.86rem;
+      color: #cbd5e1;
+    }
+
+    .field input,
+    .field select {
+      width: 130px;
+      max-width: 100%;
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(2, 6, 23, 0.7);
+      color: #e2e8f0;
+    }
+
+    .switch { display: flex; align-items: center; gap: 8px; }
+    .switch input { accent-color: #22d3ee; }
+
+    .mini {
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .touch-pad {
+      display: none;
+      grid-template-columns: repeat(3, minmax(54px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .touch-pad button {
+      min-height: 48px;
+      font-size: 1.1rem;
+      border-radius: 12px;
+    }
+
+    .touch-pad .empty { visibility: hidden; }
+
+    .mission-list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+    }
+
+    .mission-list li.complete { color: var(--success); text-decoration: line-through; }
+
+    .rain {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(transparent 40%, rgba(148, 163, 184, 0.06) 41%),
+                        linear-gradient(120deg, rgba(125, 211, 252, 0.16), transparent 35%);
+      mix-blend-mode: screen;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .2s;
+      animation: drizzle 0.4s linear infinite;
+    }
+
+    @keyframes drizzle {
+      from { transform: translateY(-4px); }
+      to { transform: translateY(4px); }
+    }
+
+    @media (max-width: 1050px) {
+      .app { grid-template-columns: 1fr; }
+      .side { max-height: none; }
+      canvas { height: min(62vh, 620px); }
+    }
+
+    @media (max-width: 620px) {
+      body { padding: 8px; }
+      .arena-wrap, .side { padding: 10px; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .touch-pad { display: grid; }
+      canvas { height: min(54vh, 470px); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="card arena-wrap">
+      <div class="top-bar">
+        <div class="title">🐍 Urban Viper <span class="badge" id="difficultyBadge">Casual</span></div>
+        <div class="controls">
+          <button id="startBtn">Start / Restart</button>
+          <button id="pauseBtn">Pause</button>
+          <button id="randomBtn">Randomize Setup</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="label">Score</div><div class="value" id="scoreVal">0</div></div>
+        <div class="stat"><div class="label">High Score</div><div class="value" id="highVal">0</div></div>
+        <div class="stat"><div class="label">Combo</div><div class="value" id="comboVal">x1</div></div>
+        <div class="stat"><div class="label">Level</div><div class="value" id="levelVal">1</div></div>
+        <div class="stat"><div class="label">Lives</div><div class="value" id="livesVal">3</div></div>
+      </div>
+
+      <div class="game-zone">
+        <canvas id="gameCanvas" width="920" height="920" aria-label="Snake game board"></canvas>
+        <div class="rain" id="rainFx"></div>
+        <div id="overlay" class="overlay">
+          <div>
+            <h2>Ready to hunt?</h2>
+            <p>Use arrow keys / WASD or touch controls. Eat, survive, chain combos, complete missions.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="touch-pad" aria-hidden="false">
+        <button class="empty">•</button>
+        <button data-dir="up">⬆️</button>
+        <button class="empty">•</button>
+        <button data-dir="left">⬅️</button>
+        <button data-dir="down">⬇️</button>
+        <button data-dir="right">➡️</button>
+      </div>
+    </section>
+
+    <aside class="card side" aria-label="Snake game settings">
+      <section class="group">
+        <h3>Difficulty Presets</h3>
+        <div class="field">
+          <label for="difficulty">Preset</label>
+          <select id="difficulty">
+            <option value="chill">🐣 Chill</option>
+            <option value="casual" selected>🌿 Casual</option>
+            <option value="rush">⚡ Rush</option>
+            <option value="pro">🔥 Pro</option>
+            <option value="insane">☠️ Insane</option>
+          </select>
+        </div>
+        <p class="mini">Changing preset updates many options; you can still fine-tune everything after.</p>
+      </section>
+
+      <section class="group">
+        <h3>Core Gameplay</h3>
+        <div class="field"><label for="gridSize">Grid size</label><input id="gridSize" type="number" min="14" max="50" value="26"></div>
+        <div class="field"><label for="baseSpeed">Base speed (cells/s)</label><input id="baseSpeed" type="number" min="4" max="30" step="0.5" value="9"></div>
+        <div class="field"><label for="speedRamp">Speed ramp / apple</label><input id="speedRamp" type="number" min="0" max="1" step="0.01" value="0.05"></div>
+        <div class="field"><label for="initialLength">Initial length</label><input id="initialLength" type="number" min="3" max="18" value="5"></div>
+        <div class="field"><label for="maxLives">Lives</label><input id="maxLives" type="number" min="1" max="9" value="3"></div>
+      </section>
+
+      <section class="group">
+        <h3>World Rules</h3>
+        <div class="field"><label for="wallMode">Walls</label>
+          <select id="wallMode"><option value="solid">Solid</option><option value="wrap">Wrap around</option></select>
+        </div>
+        <div class="field"><label for="obstacleRate">Obstacle density %</label><input id="obstacleRate" type="number" min="0" max="20" step="1" value="3"></div>
+        <div class="field"><label for="foodCount">Food count</label><input id="foodCount" type="number" min="1" max="5" value="1"></div>
+        <div class="field"><label for="powerUpRate">Power-up chance %</label><input id="powerUpRate" type="number" min="0" max="70" value="18"></div>
+        <div class="field"><label for="dayNightCycle">Day/night cycle</label><input id="dayNightCycle" type="checkbox" checked></div>
+      </section>
+
+      <section class="group">
+        <h3>Style & Accessibility</h3>
+        <div class="field"><label for="theme">Theme</label>
+          <select id="theme"><option value="city">City Neon</option><option value="forest">Forest</option><option value="desert">Desert</option><option value="ice">Ice</option></select>
+        </div>
+        <div class="field"><label for="showGrid">Show grid lines</label><input id="showGrid" type="checkbox" checked></div>
+        <div class="field"><label for="showTrail">Show motion trail</label><input id="showTrail" type="checkbox" checked></div>
+        <div class="field"><label for="rainFxOn">Rain visual effect</label><input id="rainFxOn" type="checkbox"></div>
+        <div class="field"><label for="highContrast">High contrast</label><input id="highContrast" type="checkbox"></div>
+        <div class="field"><label for="zoomMode">Zoom board on mobile</label><input id="zoomMode" type="checkbox" checked></div>
+      </section>
+
+      <section class="group">
+        <h3>Assist & Rewards</h3>
+        <div class="field"><label for="autoPause">Auto-pause when tab hidden</label><input id="autoPause" type="checkbox" checked></div>
+        <div class="field"><label for="soundOn">Sound</label><input id="soundOn" type="checkbox" checked></div>
+        <div class="field"><label for="vibrateOn">Vibration</label><input id="vibrateOn" type="checkbox" checked></div>
+        <div class="field"><label for="comboWindow">Combo window (ms)</label><input id="comboWindow" type="number" min="400" max="4000" step="50" value="1400"></div>
+        <div class="field"><label for="missionMode">Mission mode</label><input id="missionMode" type="checkbox" checked></div>
+      </section>
+
+      <section class="group">
+        <h3>Active Missions</h3>
+        <ul id="missionList" class="mission-list"></ul>
+        <div class="controls">
+          <button id="resetSettingsBtn">Reset Settings</button>
+          <button id="clearRecordsBtn">Clear Records</button>
+        </div>
+        <p class="mini">All options and records auto-save locally. Return later and continue.</p>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const STORAGE_KEY = 'urban-viper-settings-v1';
+    const RECORD_KEY = 'urban-viper-records-v1';
+
+    const themePalettes = {
+      city: { snake: '#22d3ee', snake2: '#0891b2', food: '#fb7185', bg1: '#0f172a', bg2: '#020617', obstacle: '#475569' },
+      forest: { snake: '#4ade80', snake2: '#15803d', food: '#f97316', bg1: '#052e16', bg2: '#022c22', obstacle: '#3f6212' },
+      desert: { snake: '#facc15', snake2: '#ca8a04', food: '#ef4444', bg1: '#78350f', bg2: '#451a03', obstacle: '#92400e' },
+      ice: { snake: '#93c5fd', snake2: '#1d4ed8', food: '#f472b6', bg1: '#082f49', bg2: '#0f172a', obstacle: '#334155' }
+    };
+
+    const presets = {
+      chill: { baseSpeed: 6, speedRamp: 0.02, obstacleRate: 1, powerUpRate: 24, maxLives: 5, gridSize: 24, initialLength: 4, comboWindow: 1900, wallMode: 'wrap' },
+      casual: { baseSpeed: 9, speedRamp: 0.05, obstacleRate: 3, powerUpRate: 18, maxLives: 3, gridSize: 26, initialLength: 5, comboWindow: 1400, wallMode: 'solid' },
+      rush: { baseSpeed: 12, speedRamp: 0.08, obstacleRate: 5, powerUpRate: 15, maxLives: 3, gridSize: 28, initialLength: 6, comboWindow: 1200, wallMode: 'solid' },
+      pro: { baseSpeed: 15, speedRamp: 0.11, obstacleRate: 8, powerUpRate: 12, maxLives: 2, gridSize: 30, initialLength: 6, comboWindow: 1000, wallMode: 'solid' },
+      insane: { baseSpeed: 20, speedRamp: 0.18, obstacleRate: 12, powerUpRate: 8, maxLives: 1, gridSize: 32, initialLength: 7, comboWindow: 800, wallMode: 'solid' }
+    };
+
+    const fields = ['difficulty', 'gridSize', 'baseSpeed', 'speedRamp', 'initialLength', 'maxLives', 'wallMode', 'obstacleRate', 'foodCount', 'powerUpRate', 'dayNightCycle', 'theme', 'showGrid', 'showTrail', 'rainFxOn', 'highContrast', 'zoomMode', 'autoPause', 'soundOn', 'vibrateOn', 'comboWindow', 'missionMode'];
+    const numericFields = new Set(['gridSize', 'baseSpeed', 'speedRamp', 'initialLength', 'maxLives', 'obstacleRate', 'foodCount', 'powerUpRate', 'comboWindow']);
+    const checkboxFields = new Set(['dayNightCycle', 'showGrid', 'showTrail', 'rainFxOn', 'highContrast', 'zoomMode', 'autoPause', 'soundOn', 'vibrateOn', 'missionMode']);
+
+    const state = {
+      settings: {},
+      records: { highScore: 0, totalGames: 0, apples: 0, bestCombo: 1 },
+      running: false,
+      paused: false,
+      lastMoveTs: 0,
+      elapsed: 0,
+      snake: [],
+      dir: { x: 1, y: 0 },
+      nextDir: { x: 1, y: 0 },
+      foods: [],
+      obstacles: [],
+      powerUps: [],
+      score: 0,
+      combo: 1,
+      applesThisRun: 0,
+      startTime: 0,
+      lives: 3,
+      level: 1,
+      comboDeadline: 0,
+      missions: []
+    };
+
+    const canvas = $('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = $('overlay');
+    const rainFx = $('rainFx');
+
+    function safeJsonParse(raw, fallback) {
+      try {
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function loadSettings() {
+      const loaded = safeJsonParse(localStorage.getItem(STORAGE_KEY), {});
+      for (const f of fields) {
+        const el = $(f);
+        if (!el) continue;
+        let value = loaded[f];
+        if (value == null) {
+          value = checkboxFields.has(f) ? el.checked : el.value;
+        }
+        if (checkboxFields.has(f)) el.checked = Boolean(value);
+        else el.value = value;
+      }
+      state.settings = collectSettings();
+    }
+
+    function loadRecords() {
+      const parsed = safeJsonParse(localStorage.getItem(RECORD_KEY), {});
+      state.records = { ...state.records, ...parsed };
+    }
+
+    function saveSettings() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.settings));
+      localStorage.setItem(RECORD_KEY, JSON.stringify(state.records));
+    }
+
+    function collectSettings() {
+      const out = {};
+      for (const f of fields) {
+        if (checkboxFields.has(f)) out[f] = $(f).checked;
+        else if (numericFields.has(f)) out[f] = Number($(f).value);
+        else out[f] = $(f).value;
+      }
+      out.gridSize = clamp(Math.round(out.gridSize), 14, 50);
+      out.baseSpeed = clamp(out.baseSpeed, 4, 30);
+      out.speedRamp = clamp(out.speedRamp, 0, 1);
+      out.initialLength = clamp(Math.round(out.initialLength), 3, 18);
+      out.maxLives = clamp(Math.round(out.maxLives), 1, 9);
+      out.obstacleRate = clamp(out.obstacleRate, 0, 20);
+      out.foodCount = clamp(Math.round(out.foodCount), 1, 5);
+      out.powerUpRate = clamp(out.powerUpRate, 0, 70);
+      out.comboWindow = clamp(out.comboWindow, 400, 4000);
+      return out;
+    }
+
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+    function applyPreset(name) {
+      const preset = presets[name] || presets.casual;
+      Object.entries(preset).forEach(([k, v]) => {
+        const el = $(k);
+        if (!el) return;
+        if (checkboxFields.has(k)) el.checked = Boolean(v);
+        else el.value = v;
+      });
+      state.settings = collectSettings();
+      $('difficultyBadge').textContent = capitalize(name);
+      saveSettings();
+    }
+
+    function capitalize(s) { return s[0].toUpperCase() + s.slice(1); }
+
+    function randomCell() {
+      const g = state.settings.gridSize;
+      return { x: Math.floor(Math.random() * g), y: Math.floor(Math.random() * g) };
+    }
+
+    function cellKey(c) { return `${c.x}:${c.y}`; }
+
+    function isOccupied(cell) {
+      const key = cellKey(cell);
+      return state.snake.some(s => cellKey(s) === key)
+        || state.obstacles.some(o => cellKey(o) === key)
+        || state.foods.some(f => cellKey(f) === key)
+        || state.powerUps.some(p => cellKey(p) === key);
+    }
+
+    function spawnFood() {
+      let tries = 0;
+      while (tries++ < 600) {
+        const cell = randomCell();
+        if (!isOccupied(cell)) {
+          state.foods.push({ ...cell, born: performance.now() });
+          break;
+        }
+      }
+    }
+
+    function spawnPowerUp(force = false) {
+      if (!force && Math.random() * 100 > state.settings.powerUpRate) return;
+      const types = ['shield', 'slow', 'double'];
+      let tries = 0;
+      while (tries++ < 400) {
+        const cell = randomCell();
+        if (!isOccupied(cell)) {
+          const type = types[Math.floor(Math.random() * types.length)];
+          state.powerUps.push({ ...cell, type, expireAt: performance.now() + 9000 });
+          break;
+        }
+      }
+    }
+
+    function spawnObstacles() {
+      state.obstacles = [];
+      const total = Math.floor((state.settings.gridSize ** 2) * (state.settings.obstacleRate / 100));
+      for (let i = 0; i < total; i++) {
+        let tries = 0;
+        while (tries++ < 400) {
+          const cell = randomCell();
+          const nearSpawn = Math.abs(cell.x - state.snake[0].x) < 4 && Math.abs(cell.y - state.snake[0].y) < 4;
+          if (!nearSpawn && !isOccupied(cell)) {
+            state.obstacles.push(cell);
+            break;
+          }
+        }
+      }
+    }
+
+    function randomUnoccupiedCell(maxTries = 700) {
+      let tries = 0;
+      while (tries++ < maxTries) {
+        const cell = randomCell();
+        if (!isOccupied(cell)) return cell;
+      }
+      return null;
+    }
+
+    function buildMissions() {
+      state.missions = [
+        { text: 'Collect 8 apples', target: 8, value: () => state.applesThisRun, done: false },
+        { text: 'Reach combo x4', target: 4, value: () => state.combo, done: false },
+        { text: 'Score 120 points', target: 120, value: () => state.score, done: false },
+        { text: 'Survive 90 seconds', target: 90, value: () => Math.floor((performance.now() - state.startTime) / 1000), done: false }
+      ];
+      renderMissions();
+    }
+
+    function renderMissions() {
+      const list = $('missionList');
+      list.innerHTML = '';
+      for (const m of state.missions) {
+        const li = document.createElement('li');
+        li.className = m.done ? 'complete' : '';
+        li.textContent = `${m.text} (${Math.min(m.value(), m.target)}/${m.target})`;
+        list.appendChild(li);
+      }
+    }
+
+    function initGame() {
+      state.settings = collectSettings();
+      saveSettings();
+      const g = state.settings.gridSize;
+      const center = Math.floor(g / 2);
+      state.snake = [];
+      for (let i = 0; i < state.settings.initialLength; i++) {
+        state.snake.push({ x: center - i, y: center });
+      }
+      state.dir = { x: 1, y: 0 };
+      state.nextDir = { x: 1, y: 0 };
+      state.foods = [];
+      state.powerUps = [];
+      state.score = 0;
+      state.combo = 1;
+      state.applesThisRun = 0;
+      state.lives = state.settings.maxLives;
+      state.level = 1;
+      state.comboDeadline = 0;
+      state.elapsed = 0;
+      state.startTime = performance.now();
+      state.lastMoveTs = performance.now();
+      state.running = true;
+      state.paused = false;
+      state.activeEffects = { shieldUntil: 0, slowUntil: 0, doubleUntil: 0 };
+      spawnObstacles();
+      while (state.foods.length < state.settings.foodCount) spawnFood();
+      spawnPowerUp(true);
+      if (state.settings.missionMode) buildMissions(); else { state.missions = []; renderMissions(); }
+      hideOverlay(true);
+      updateHud();
+    }
+
+    function hideOverlay(hide) {
+      overlay.classList.toggle('hidden', hide);
+      overlay.style.pointerEvents = hide ? 'none' : 'auto';
+    }
+
+    function setDirection(dir) {
+      const map = {
+        up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 }
+      };
+      const next = map[dir];
+      if (!next || !state.running) return;
+      if (next.x === -state.dir.x && next.y === -state.dir.y) return;
+      state.nextDir = next;
+    }
+
+    function eatAt(head) {
+      const foodIndex = state.foods.findIndex(f => f.x === head.x && f.y === head.y);
+      let grew = false;
+      if (foodIndex >= 0) {
+        state.foods.splice(foodIndex, 1);
+        grew = true;
+        state.applesThisRun += 1;
+        state.records.apples += 1;
+        const now = performance.now();
+        if (now < state.comboDeadline) state.combo += 1; else state.combo = 1;
+        state.comboDeadline = now + state.settings.comboWindow;
+        const double = now < state.activeEffects.doubleUntil ? 2 : 1;
+        state.score += (10 + state.combo * 2) * double;
+        state.level = 1 + Math.floor(state.applesThisRun / 6);
+        playTone(420 + Math.random() * 120, 0.07);
+        buzz(12);
+        spawnFood();
+        if (Math.random() < 0.4) spawnPowerUp();
+      }
+
+      const powerIndex = state.powerUps.findIndex(p => p.x === head.x && p.y === head.y);
+      if (powerIndex >= 0) {
+        const picked = state.powerUps.splice(powerIndex, 1)[0];
+        const now = performance.now();
+        if (picked.type === 'shield') state.activeEffects.shieldUntil = now + 9000;
+        if (picked.type === 'slow') state.activeEffects.slowUntil = now + 7000;
+        if (picked.type === 'double') state.activeEffects.doubleUntil = now + 9000;
+        state.score += 12;
+        playTone(760, 0.12);
+      }
+
+      return grew;
+    }
+
+    function hitCollision(head) {
+      const g = state.settings.gridSize;
+      const shielded = performance.now() < state.activeEffects.shieldUntil;
+
+      if (state.settings.wallMode === 'solid' && (head.x < 0 || head.y < 0 || head.x >= g || head.y >= g)) {
+        if (shielded) return false;
+        return true;
+      }
+
+      if (state.settings.wallMode === 'wrap') {
+        head.x = (head.x + g) % g;
+        head.y = (head.y + g) % g;
+      }
+
+      if (state.obstacles.some(o => o.x === head.x && o.y === head.y)) {
+        if (shielded) return false;
+        return true;
+      }
+
+      if (state.snake.some(s => s.x === head.x && s.y === head.y)) {
+        if (shielded) return false;
+        return true;
+      }
+
+      return false;
+    }
+
+    function tick() {
+      if (!state.running || state.paused) return;
+      const now = performance.now();
+      state.powerUps = state.powerUps.filter(p => p.expireAt > now);
+      const speedMod = now < state.activeEffects.slowUntil ? 0.62 : 1;
+      const cellsPerSecond = (state.settings.baseSpeed + state.applesThisRun * state.settings.speedRamp) * speedMod;
+      const moveEvery = 1000 / cellsPerSecond;
+
+      if (now - state.lastMoveTs < moveEvery) return;
+      state.lastMoveTs = now;
+
+      state.dir = state.nextDir;
+      const head = { x: state.snake[0].x + state.dir.x, y: state.snake[0].y + state.dir.y };
+      const dead = hitCollision(head);
+      if (dead) {
+        state.lives -= 1;
+        state.combo = 1;
+        playTone(120, 0.2);
+        if (state.lives <= 0) {
+          gameOver();
+          return;
+        }
+        const safe = randomUnoccupiedCell();
+        if (!safe) {
+          gameOver();
+          return;
+        }
+        state.snake = [safe, { x: safe.x - 1, y: safe.y }, { x: safe.x - 2, y: safe.y }];
+        state.dir = { x: 1, y: 0 };
+        state.nextDir = { x: 1, y: 0 };
+        return;
+      }
+
+      state.snake.unshift(head);
+      const grew = eatAt(head);
+      if (!grew) state.snake.pop();
+      if (performance.now() > state.comboDeadline) state.combo = 1;
+      checkMissions();
+      updateHud();
+    }
+
+    function checkMissions() {
+      if (!state.settings.missionMode || !state.missions.length) return;
+      let completedNow = 0;
+      for (const m of state.missions) {
+        if (!m.done && m.value() >= m.target) {
+          m.done = true;
+          completedNow++;
+        }
+      }
+      if (completedNow) {
+        state.score += completedNow * 30;
+        playTone(880, 0.08);
+      }
+      renderMissions();
+    }
+
+    function gameOver() {
+      state.running = false;
+      state.records.totalGames += 1;
+      state.records.highScore = Math.max(state.records.highScore, state.score);
+      state.records.bestCombo = Math.max(state.records.bestCombo, state.combo);
+      saveSettings();
+      overlay.innerHTML = `<div><h2>Game Over</h2><p>Score: ${state.score}. High score: ${state.records.highScore}. Press Start to jump in again.</p></div>`;
+      hideOverlay(false);
+      updateHud();
+    }
+
+    function updateHud() {
+      $('scoreVal').textContent = state.score.toString();
+      $('highVal').textContent = state.records.highScore.toString();
+      $('comboVal').textContent = `x${state.combo}`;
+      $('levelVal').textContent = state.level.toString();
+      $('livesVal').textContent = state.lives.toString();
+      $('difficultyBadge').textContent = capitalize(state.settings.difficulty || 'casual');
+      rainFx.style.opacity = state.settings.rainFxOn ? '0.5' : '0';
+    }
+
+    function draw() {
+      const g = state.settings.gridSize;
+      const size = canvas.width;
+      const cell = size / g;
+      const t = performance.now() / 1000;
+      const palette = themePalettes[state.settings.theme] || themePalettes.city;
+
+      const dayShift = state.settings.dayNightCycle ? (Math.sin(t * 0.07) + 1) / 2 : 0.4;
+      const bg = ctx.createLinearGradient(0, 0, size, size);
+      bg.addColorStop(0, blend(palette.bg1, '#1e293b', dayShift * 0.35));
+      bg.addColorStop(1, blend(palette.bg2, '#020617', dayShift * 0.15));
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, size, size);
+
+      if (state.settings.showGrid) {
+        ctx.strokeStyle = state.settings.highContrast ? 'rgba(226,232,240,0.16)' : 'rgba(148,163,184,0.09)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= g; i++) {
+          const p = i * cell;
+          ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, size); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(size, p); ctx.stroke();
+        }
+      }
+
+      for (const o of state.obstacles) {
+        drawRoundedRect(o.x * cell + 2, o.y * cell + 2, cell - 4, cell - 4, Math.max(3, cell * 0.14), palette.obstacle);
+      }
+
+      for (const f of state.foods) {
+        const cx = f.x * cell + cell / 2;
+        const cy = f.y * cell + cell / 2;
+        const pulse = 1 + Math.sin((performance.now() - f.born) * 0.012) * 0.08;
+        ctx.beginPath();
+        ctx.fillStyle = palette.food;
+        ctx.shadowColor = palette.food;
+        ctx.shadowBlur = 12;
+        ctx.arc(cx, cy, (cell * 0.3) * pulse, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+
+      for (const p of state.powerUps) {
+        const x = p.x * cell;
+        const y = p.y * cell;
+        const colors = { shield: '#22c55e', slow: '#38bdf8', double: '#f59e0b' };
+        drawRoundedRect(x + 3, y + 3, cell - 6, cell - 6, Math.max(3, cell * 0.2), colors[p.type] || '#fff');
+      }
+
+      state.snake.forEach((s, i) => {
+        const x = s.x * cell;
+        const y = s.y * cell;
+        const ratio = 1 - i / Math.max(1, state.snake.length);
+        const bodyColor = blend(palette.snake2, palette.snake, ratio * 0.9);
+        drawRoundedRect(x + 1.8, y + 1.8, cell - 3.6, cell - 3.6, Math.max(4, cell * 0.25), bodyColor);
+
+        if (state.settings.showTrail && i > 0 && i % 2 === 0) {
+          ctx.fillStyle = 'rgba(226,232,240,0.06)';
+          ctx.fillRect(x + cell * 0.3, y + cell * 0.3, cell * 0.4, cell * 0.4);
+        }
+      });
+
+      const head = state.snake[0];
+      if (head) {
+        const x = head.x * cell;
+        const y = head.y * cell;
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath(); ctx.arc(x + cell * 0.35, y + cell * 0.35, cell * 0.07, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + cell * 0.65, y + cell * 0.35, cell * 0.07, 0, Math.PI * 2); ctx.fill();
+      }
+
+      if (performance.now() < state.activeEffects.shieldUntil) {
+        const h = state.snake[0];
+        if (h) {
+          ctx.strokeStyle = 'rgba(34, 197, 94, 0.7)';
+          ctx.lineWidth = Math.max(2, cell * 0.15);
+          ctx.beginPath();
+          ctx.arc(h.x * cell + cell / 2, h.y * cell + cell / 2, cell * 0.7, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function drawRoundedRect(x, y, w, h, r, fill) {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.fill();
+    }
+
+    function blend(a, b, t) {
+      const c1 = hexToRgb(a);
+      const c2 = hexToRgb(b);
+      const mix = (u, v) => Math.round(u + (v - u) * t);
+      return `rgb(${mix(c1.r, c2.r)}, ${mix(c1.g, c2.g)}, ${mix(c1.b, c2.b)})`;
+    }
+
+    function hexToRgb(hex) {
+      const raw = hex.replace('#', '');
+      const v = raw.length === 3 ? raw.split('').map(x => x + x).join('') : raw;
+      const int = parseInt(v, 16);
+      return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
+    }
+
+    function playTone(freq, dur) {
+      if (!state.settings.soundOn) return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        if (!playTone.ctx) playTone.ctx = new AC();
+        const audio = playTone.ctx;
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.value = 0.0001;
+        osc.connect(gain); gain.connect(audio.destination);
+        osc.start();
+        const now = audio.currentTime;
+        gain.gain.exponentialRampToValueAtTime(0.07, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        osc.stop(now + dur + 0.03);
+      } catch {}
+    }
+
+    function buzz(ms) {
+      if (state.settings.vibrateOn && navigator.vibrate) navigator.vibrate(ms);
+    }
+
+    function gameLoop() {
+      resizeCanvas();
+      tick();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const size = Math.floor(Math.min(rect.width, rect.height));
+      if (size > 0 && (canvas.width !== size || canvas.height !== size)) {
+        canvas.width = size;
+        canvas.height = size;
+      }
+
+      if (window.innerWidth < 620 && state.settings.zoomMode) {
+        canvas.style.height = '58vh';
+      } else {
+        canvas.style.height = '';
+      }
+    }
+
+    function randomizeSetup() {
+      const keys = Object.keys(presets);
+      const preset = keys[Math.floor(Math.random() * keys.length)];
+      $('difficulty').value = preset;
+      applyPreset(preset);
+      $('theme').selectedIndex = Math.floor(Math.random() * $('theme').options.length);
+      $('wallMode').selectedIndex = Math.floor(Math.random() * $('wallMode').options.length);
+      $('foodCount').value = 1 + Math.floor(Math.random() * 4);
+      $('rainFxOn').checked = Math.random() < 0.5;
+      $('highContrast').checked = Math.random() < 0.3;
+      state.settings = collectSettings();
+      saveSettings();
+      updateHud();
+    }
+
+    function resetSettingsToDefaults() {
+      localStorage.removeItem(STORAGE_KEY);
+      loadSettings();
+      state.settings = collectSettings();
+      updateHud();
+    }
+
+    function clearRecords() {
+      state.records = { highScore: 0, totalGames: 0, apples: 0, bestCombo: 1 };
+      saveSettings();
+      updateHud();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      const map = {
+        ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right'
+      };
+      if (map[e.code]) {
+        e.preventDefault();
+        setDirection(map[e.code]);
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        state.paused = !state.paused;
+      }
+    }, { passive: false });
+
+    document.querySelectorAll('.touch-pad button[data-dir]').forEach(btn => {
+      btn.addEventListener('click', () => setDirection(btn.dataset.dir));
+    });
+
+    $('startBtn').addEventListener('click', initGame);
+    $('pauseBtn').addEventListener('click', () => {
+      if (!state.running) return;
+      state.paused = !state.paused;
+      if (state.paused) {
+        overlay.innerHTML = '<div><h2>Paused</h2><p>Press pause again or hit Space to continue.</p></div>';
+        hideOverlay(false);
+      } else {
+        hideOverlay(true);
+      }
+    });
+    $('randomBtn').addEventListener('click', randomizeSetup);
+    $('resetSettingsBtn').addEventListener('click', resetSettingsToDefaults);
+    $('clearRecordsBtn').addEventListener('click', clearRecords);
+
+    $('difficulty').addEventListener('change', (e) => applyPreset(e.target.value));
+    fields.forEach((f) => {
+      const el = $(f);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        state.settings = collectSettings();
+        saveSettings();
+        updateHud();
+      });
+      el.addEventListener('change', () => {
+        state.settings = collectSettings();
+        saveSettings();
+        updateHud();
+      });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (state.settings.autoPause && document.hidden && state.running) {
+        state.paused = true;
+        overlay.innerHTML = '<div><h2>Auto-paused</h2><p>Tab became inactive. Resume when ready.</p></div>';
+        hideOverlay(false);
+      }
+    });
+
+    loadSettings();
+    loadRecords();
+    updateHud();
+    hideOverlay(false);
+    gameLoop();
+  </script>
+</body>
+</html>
