@@ -427,7 +427,8 @@
       lives: 3,
       level: 1,
       comboDeadline: 0,
-      missions: []
+      missions: [],
+      activeEffects: { shieldUntil: 0, slowUntil: 0, doubleUntil: 0 }
     };
 
     const canvas = $('gameCanvas');
@@ -677,7 +678,11 @@
       const shielded = performance.now() < state.activeEffects.shieldUntil;
 
       if (state.settings.wallMode === 'solid' && (head.x < 0 || head.y < 0 || head.x >= g || head.y >= g)) {
-        if (shielded) return false;
+        if (shielded) {
+          head.x = clamp(head.x, 0, g - 1);
+          head.y = clamp(head.y, 0, g - 1);
+          return false;
+        }
         return true;
       }
 
@@ -726,9 +731,10 @@
           gameOver();
           return;
         }
-        state.snake = [safe, { x: safe.x - 1, y: safe.y }, { x: safe.x - 2, y: safe.y }];
-        state.dir = { x: 1, y: 0 };
-        state.nextDir = { x: 1, y: 0 };
+        const offset = safe.x >= 2 ? -1 : 1;
+        state.snake = [safe, { x: safe.x + offset, y: safe.y }, { x: safe.x + offset * 2, y: safe.y }];
+        state.dir = { x: -offset, y: 0 };
+        state.nextDir = { x: -offset, y: 0 };
         return;
       }
 
